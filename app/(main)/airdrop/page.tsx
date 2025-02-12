@@ -23,6 +23,7 @@ const Airdrop = () => {
   return (
     <div className="w-40 h-40 flex justify-center items-center gap-2 flex-col">
       <input
+        className="bg-inherit border border-slate-300"
         type="text"
         value={amount}
         onChange={(e) => {

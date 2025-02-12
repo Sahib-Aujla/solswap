@@ -1,4 +1,4 @@
-import Main from "@/components/Main";
+import MiniNavbar from "@/components/MiniNavbar";
 import Navbar from "@/components/Navbar";
 
 export default function Home() {
@@ -7,7 +7,7 @@ export default function Home() {
       <Navbar />
       <div className=" max-h-full max-w-full flex justify-center items-center">
         <div className="w-1/4 h-1/4">
-          <Main />
+          <MiniNavbar />
         </div>
       </div>
     </div>
