@@ -1,8 +1,12 @@
 import React from 'react'
+import MiniNavbar from './MiniNavbar'
 
 const Main = () => {
   return (
-    <div>Main</div>
+    <div>
+        <MiniNavbar />
+        <div>Content</div>
+    </div>
   )
 }
 
