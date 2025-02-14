@@ -16,12 +16,16 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   // Choose your desired network (e.g., Devnet, Testnet, or Mainnet)
-//   const network = WalletAdapterNetwork.Devnet;
-//   // Memoize the endpoint URL so it doesn’t recreate on every render
-//   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  //   const network = WalletAdapterNetwork.Devnet;
+  //   // Memoize the endpoint URL so it doesn’t recreate on every render
+  //   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const network = WalletAdapterNetwork.Devnet;
+  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+
+  // Initialize wallet adapters
 
   return (
-    <ConnectionProvider endpoint={"https://api.devnet.solana.com"}>
+    <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={[]}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
