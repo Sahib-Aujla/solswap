@@ -18,7 +18,7 @@ const SendToken = () => {
 
   const handleSend = async () => {
     try {
-      const val = parseInt(amount);
+      const val = parseFloat(amount);
       if (val < 0 || address === "" || !wallet.publicKey) return;
       const transaction = new Transaction();
       transaction.add(
