@@ -10,7 +10,7 @@ const Airdrop = () => {
   const handleClick = async () => {
     try {
       console.log("Airdrop", amount);
-      const val = parseInt(amount);
+      const val = parseFloat(amount);
       if (val > 0) {
         //airdrop
         if (!wallet.publicKey) {
