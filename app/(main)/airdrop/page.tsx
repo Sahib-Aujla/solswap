@@ -8,16 +8,25 @@ const Airdrop = () => {
   const wallet = useWallet();
   const { connection } = useConnection();
   const handleClick = async () => {
-    console.log("Airdrop", amount);
-    const val = parseInt(amount);
-    if (val > 0) {
-      //airdrop
-      if (!wallet.publicKey) {
-        alert("Wallet not connected");
-        return;
+    try {
+      console.log("Airdrop", amount);
+      const val = parseInt(amount);
+      if (val > 0) {
+        //airdrop
+        if (!wallet.publicKey) {
+          alert("Wallet not connected");
+          return;
+        }
+        await connection.requestAirdrop(
+          wallet.publicKey,
+          val * LAMPORTS_PER_SOL
+        );
+        alert(
+          "Airdropped " + amount + " SOL to " + wallet.publicKey.toBase58()
+        );
       }
-      await connection.requestAirdrop(wallet.publicKey, val * LAMPORTS_PER_SOL);
-      alert("Airdropped " + amount + " SOL to " + wallet.publicKey.toBase58());
+    } catch (error) {
+      console.log(error);
     }
   };
   return (
