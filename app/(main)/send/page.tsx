@@ -1,8 +1,9 @@
+import SendToken from '@/components/SendToken'
 import React from 'react'
 
 const Send = () => {
   return (
-    <div>Send</div>
+    <div><SendToken /></div>
   )
 }
 
