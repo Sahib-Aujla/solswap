@@ -13,6 +13,9 @@ const MiniNavbar = () => {
       <Link href="/airdrop">
         <div className='cursor-pointer'>Airdrop</div>
       </Link>
+      <Link href="/token">
+        <div className='cursor-pointer'>Create Token</div>
+      </Link>
     </div>
   )
 }
