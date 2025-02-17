@@ -1,9 +1,11 @@
-import React from 'react'
+import { getAllTokens } from "@/utils/jup";
+import React, { useEffect } from "react";
 
 const Swap = () => {
-  return (
-    <div>Swap</div>
-  )
-}
+  useEffect(() => {
+    getAllTokens().then((res) => console.log(res));
+  }, []);
+  return <div></div>;
+};
 
-export default Swap
+export default Swap;
