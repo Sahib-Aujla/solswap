@@ -74,13 +74,16 @@ const Swap = () => {
     <div className="flex items-center justify-center w-full h-full">
       <div className="w-full max-w-md space-y-4 p-4">
         <div className="bg-[#1b1b1b] p-4 rounded-lg shadow-lg">
-          <div className="text-[#939393] text-sm mb-2">You Pay</div>
+          <div className="text-[#939393] text-sm ">You Pay</div>
           <input
             value={val}
             onChange={async (e) => {
               setVal(e.target.value);
               const lmp = parseFloat(e.target.value) * LAMPORTS_PER_SOL;
-              if (lmp === 0 || isNaN(lmp)) return;
+              if (lmp === 0 || isNaN(lmp)) {
+                setVal2("");
+                return;
+              }
               const resp = await getQuote(lmp);
               const r = parseInt(resp.outAmount) / 1000000;
               setVal2(r.toString());
