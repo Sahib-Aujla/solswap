@@ -1,14 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  PublicKey,
-  Keypair,
-  SystemProgram,
-  Transaction,
-} from "@solana/web3.js";
+import { PublicKey, Keypair, SystemProgram, Transaction } from "@solana/web3.js";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-
 import {
   TOKEN_2022_PROGRAM_ID,
   getMintLen,
@@ -21,69 +15,72 @@ import {
   TYPE_SIZE,
   LENGTH_SIZE,
 } from "@solana/spl-token";
-
 import { createInitializeInstruction, pack } from "@solana/spl-token-metadata";
+
+interface TokenFormState {
+  name: string;
+  symbol: string;
+  supply: string;
+  image: string;
+  decimal: string;
+}
+
+const initialFormState: TokenFormState = {
+  name: "",
+  symbol: "",
+  supply: "",
+  image: "",
+  decimal: "9",
+};
 
 const TokenCreate = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
+  const [loading, setLoading] = useState(false);
+  const [formState, setFormState] = useState<TokenFormState>(initialFormState);
 
-  // Form state
-  const [name, setName] = useState("");
-  const [symbol, setSymbol] = useState("");
-  const [supply, setSupply] = useState("");
-  const [image, setImage] = useState("");
-  const [decimal, setDecimal] = useState("9");
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormState(prev => ({ ...prev, [name]: value }));
+  };
+
+  const isFormValid = () => {
+    return Object.values(formState).every(value => value !== "") && wallet?.publicKey;
+  };
 
   const createToken = async () => {
-    try {
-      // Basic validation
-      if (
-        !wallet ||
-        !wallet.publicKey ||
-        !name ||
-        !symbol ||
-        !supply ||
-        !image ||
-        !decimal
-      ) {
-        console.log("Missing required fields or wallet not connected.");
-        return;
-      }
+    if (!isFormValid() || !wallet?.publicKey) {
+      alert("Please fill all fields and connect your wallet");
+      return;
+    }
 
-      // 1. Prepare the mint keypair
+    try {
+      setLoading(true);
       const mintKeypair = Keypair.generate();
 
-      // 2. Prepare metadata
+      // Prepare metadata
       const metadata = {
         mint: mintKeypair.publicKey,
-        name: name,
-        symbol: symbol,
-        uri: image,
-        additionalMetadata: [], // Add more fields if needed
+        name: formState.name,
+        symbol: formState.symbol,
+        uri: formState.image,
+        additionalMetadata: [],
       };
 
-      // 3. Calculate space and rent
+      // Calculate space and rent
       const mintLen = getMintLen([ExtensionType.MetadataPointer]);
       const metadataLen = TYPE_SIZE + LENGTH_SIZE + pack(metadata).length;
-      // const metadataLen = LENGTH_SIZE + pack(metadata).length;
       const lamports = await connection.getMinimumBalanceForRentExemption(
         mintLen + metadataLen
       );
 
-      // 4. Create instructions to:
-      //    (a) create the account
-      //    (b) initialize metadata pointer
-      //    (c) initialize the mint
-      //    (d) initialize the metadata
-      const decimals = parseInt(decimal, 10);
-
+      const decimals = parseInt(formState.decimal, 10);
       const txInstructions = [];
 
-      // (a) Create the mint account
+      // Create the mint account
       txInstructions.push(
         SystemProgram.createAccount({
-          fromPubkey: wallet.publicKey,
+          fromPubkey: wallet.publicKey!,
           newAccountPubkey: mintKeypair.publicKey,
           space: mintLen,
           lamports,
@@ -91,147 +88,139 @@ const TokenCreate = () => {
         })
       );
 
-      // (b) Initialize the metadata pointer extension
+      // Initialize metadata pointer
       txInstructions.push(
         createInitializeMetadataPointerInstruction(
           mintKeypair.publicKey,
-          wallet.publicKey,
+          wallet.publicKey!,
           mintKeypair.publicKey,
           TOKEN_2022_PROGRAM_ID
         )
       );
 
-      // (c) Initialize the mint
+      // Initialize mint
       txInstructions.push(
         createInitializeMintInstruction(
           mintKeypair.publicKey,
           decimals,
-          wallet.publicKey,
-          null, // freeze authority can be null
+          wallet.publicKey!,
+          null,
           TOKEN_2022_PROGRAM_ID
         )
       );
 
-      // (d) Create + init the metadata
+      // Initialize metadata
       txInstructions.push(
         createInitializeInstruction({
           programId: TOKEN_2022_PROGRAM_ID,
           mint: mintKeypair.publicKey,
-          metadata: mintKeypair.publicKey, // same address in token-2022 extension
+          metadata: mintKeypair.publicKey,
           name: metadata.name,
           symbol: metadata.symbol,
           uri: metadata.uri,
-          mintAuthority: wallet.publicKey,
-          updateAuthority: wallet.publicKey,
+          mintAuthority: wallet.publicKey!,
+          updateAuthority: wallet.publicKey!,
         })
       );
 
-      // 5. Create (or derive) an associated token account (ATA) to hold the minted tokens
+      // Create ATA
       const [ataAddress] = PublicKey.findProgramAddressSync(
         [
-          wallet.publicKey.toBuffer(),
+          wallet.publicKey!.toBuffer(),
           TOKEN_2022_PROGRAM_ID.toBuffer(),
           mintKeypair.publicKey.toBuffer(),
         ],
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
 
-      // Add instruction to create the ATA
       txInstructions.push(
         createAssociatedTokenAccountInstruction(
-          wallet.publicKey, // payer
-          ataAddress, // ATA to create
-          wallet.publicKey, // owner of the ATA
-          mintKeypair.publicKey, // mint
-          TOKEN_2022_PROGRAM_ID // token-2022 program ID
+          wallet.publicKey!,
+          ataAddress,
+          wallet.publicKey!,
+          mintKeypair.publicKey,
+          TOKEN_2022_PROGRAM_ID
         )
       );
 
-      // 6. Mint the tokens
-      // Parse supply as a BigInt, multiply by 10^decimals
-      const supplyInBaseUnits =
-        BigInt(parseInt(supply, 10)) * BigInt(10 ** decimals);
-
+      // Mint tokens
+      const supplyInBaseUnits = BigInt(parseInt(formState.supply, 10)) * BigInt(10 ** decimals);
       txInstructions.push(
         createMintToInstruction(
-          mintKeypair.publicKey, // mint
-          ataAddress, // destination
-          wallet.publicKey, // authority
-          supplyInBaseUnits, // amount in base units
+          mintKeypair.publicKey,
+          ataAddress,
+          wallet.publicKey!,
+          supplyInBaseUnits,
           [],
           TOKEN_2022_PROGRAM_ID
         )
       );
 
-      // 7. Build and send transaction
+      // Build and send transaction
       const transaction = new Transaction().add(...txInstructions);
       transaction.feePayer = wallet.publicKey;
-      transaction.recentBlockhash = (
-        await connection.getLatestBlockhash()
-      ).blockhash;
-
-      // The mintKeypair must sign because we are creating the account
+      transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
       transaction.partialSign(mintKeypair);
 
-      // The wallet signs to pay and authorize the mint
       const txSignature = await wallet.sendTransaction(transaction, connection);
-
-      // Optionally, confirm the transaction
-      const confirmResult = await connection.confirmTransaction(
-        txSignature,
-        "confirmed"
-      );
+      const confirmResult = await connection.confirmTransaction(txSignature, "confirmed");
+      
       console.log("Transaction confirmation:", confirmResult);
+      alert(`Token created successfully! Signature: ${txSignature}`);
+      setFormState(initialFormState);
     } catch (error) {
       console.error("Error creating token:", error);
+      alert("Failed to create token. Check console for details.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const inputFields = [
+    { name: "name", placeholder: "Token Name" },
+    { name: "symbol", placeholder: "Symbol" },
+    { name: "supply", placeholder: "Initial Supply" },
+    { name: "image", placeholder: "Metadata URI (Image)" },
+    { name: "decimal", placeholder: "Decimals" },
+  ];
+
   return (
-    <div className="border border-slate-300 rounded-lg p-4">
-      <h2 className="text-xl font-bold mb-4">Create a Token (Token-2022)</h2>
-      <div className="flex flex-col gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          type="text"
-          placeholder="Token Name"
-          className="bg-inherit border border-slate-500 p-2"
-        />
-        <input
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
-          type="text"
-          placeholder="Symbol"
-          className="bg-inherit border border-slate-500 p-2"
-        />
-        <input
-          value={supply}
-          onChange={(e) => setSupply(e.target.value)}
-          type="text"
-          placeholder="Initial Supply"
-          className="bg-inherit border border-slate-500 p-2"
-        />
-        <input
-          value={image}
-          onChange={(e) => setImage(e.target.value)}
-          type="text"
-          placeholder="Metadata URI (Image)"
-          className="bg-inherit border border-slate-500 p-2"
-        />
-        <input
-          value={decimal}
-          onChange={(e) => setDecimal(e.target.value)}
-          type="text"
-          placeholder="Decimals"
-          className="bg-inherit border border-slate-500 p-2"
-        />
-        <button
-          onClick={createToken}
-          className="bg-white text-black p-3 mt-2 hover:bg-slate-100"
-        >
-          Create Token
-        </button>
+    <div className="flex items-center justify-center w-full h-full">
+      <div className="w-full max-w-md space-y-4 p-4">
+        <div className="bg-[#1b1b1b] p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold mb-6 text-white">Create Token</h2>
+          <div className="space-y-4">
+            {inputFields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <label className="text-[#939393] text-sm">
+                  {field.placeholder}
+                </label>
+                <input
+                  name={field.name}
+                  value={formState[field.name as keyof TokenFormState]}
+                  onChange={handleInputChange}
+                  type="text"
+                  placeholder={field.placeholder}
+                  className="bg-inherit w-full text-white p-3 
+                           border border-[#2d2d2d] rounded-lg
+                           outline-none focus:outline-none focus:border-[#f971fc]
+                           transition-colors duration-200"
+                  disabled={loading}
+                />
+              </div>
+            ))}
+            
+            <button
+              onClick={createToken}
+              disabled={!isFormValid() || loading}
+              className="w-full bg-[#f971fc] hover:bg-[#ee6cf0] text-white font-semibold 
+                       py-4 px-6 rounded-lg transition-colors duration-200
+                       disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+            >
+              {loading ? "Creating Token..." : "Create Token"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
