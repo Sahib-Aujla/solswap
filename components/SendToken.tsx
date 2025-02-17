@@ -9,10 +9,8 @@ import {
 import React, { useState } from "react";
 
 const SendToken = () => {
-  //get the wallet and connection first
-  const [amount, setAmount] = useState("0");
+  const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
-
   const wallet = useWallet();
   const { connection } = useConnection();
 
@@ -38,24 +36,42 @@ const SendToken = () => {
   };
 
   return (
-    <div className="flex w-full h-full">
-      <div>
-        <input
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          className="bg-inherit text-white p-2 m-3"
-          type="text"
-          placeholder="Enter Address"
-        />
-        <input
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="bg-inherit text-white p-2 m-3"
-          type="text"
-          placeholder="Enter Amount"
-        />
-        <button onClick={handleSend} className="bg-white text-black p-4 m-3">
-          Send Sol
+    <div className="flex items-center justify-center w-full h-full">
+      <div className="w-full max-w-md space-y-4 p-4">
+        <div className="bg-[#1b1b1b] p-4 rounded-lg shadow-lg">
+          <div className="text-[#939393] text-sm mb-2">You&apos;re Sending</div>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="bg-inherit w-full text-center text-white text-5xl p-4 
+                     outline-none focus:outline-none placeholder-gray-500
+                     transition-colors duration-200"
+            type="text"
+            placeholder="0"
+          />
+        </div>
+
+        <div className="bg-[#1b1b1b] p-4 rounded-lg shadow-lg">
+          <div className="text-[#939393] text-sm mb-2">To</div>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="bg-inherit w-full text-white p-3 
+                     outline-none focus:outline-none placeholder-gray-500
+                     transition-colors duration-200"
+            type="text"
+            placeholder="Enter Solana address"
+          />
+        </div>
+
+        <button
+          onClick={handleSend}
+          className="w-full bg-[#f971fc] hover:bg-[#ee6cf0] text-white font-semibold 
+                   py-4 px-6 rounded-lg transition-colors duration-200
+                   disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!amount || !address || !wallet.publicKey}
+        >
+          Send SOL
         </button>
       </div>
     </div>
