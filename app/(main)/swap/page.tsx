@@ -1,19 +1,62 @@
 "use client";
-import { getQuote } from "@/utils/jup";
+import { getQuote, getSwapResponse } from "@/utils/jup";
 import { QuoteResponse } from "@jup-ag/api";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { LAMPORTS_PER_SOL, VersionedTransaction } from "@solana/web3.js";
 import React, { useState } from "react";
 
 const Swap = () => {
   const wallet = useWallet();
+  const { connection } = useConnection();
   const [val, setVal] = useState("0");
   const [val2, setVal2] = useState("0");
   const [quote, setQuote] = useState<QuoteResponse>();
 
   const createTxn = async () => {
     if (!wallet || !wallet.publicKey || !quote) return;
+    const swapResponse = await getSwapResponse(
+      wallet.publicKey.toBase58(),
+      quote
+    );
+    //console.log(swapResp);
+    const swapTransactionBuf = Buffer.from(
+      swapResponse.swapTransaction,
+      "base64"
+    );
+    const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
 
+    // Sign the transaction
+    const signature = await wallet.sendTransaction(transaction, connection);
+
+    // We first simulate whether the transaction would be successful
+    const { value: simulatedTransactionResponse } =
+      await connection.simulateTransaction(transaction, {
+        replaceRecentBlockhash: true,
+        commitment: "processed",
+      });
+    const { err, logs } = simulatedTransactionResponse;
+
+    if (err) {
+      console.error("Simulation Error:");
+      console.error({ err, logs });
+      return;
+    }
+
+    const serializedTransaction = Buffer.from(transaction.serialize());
+
+    const transactionResponse = await connection.sendRawTransaction(
+      serializedTransaction,
+      {
+        skipPreflight: true,
+      }
+    );
+
+    if (!transactionResponse) {
+      console.error("Transaction not confirmed");
+      return;
+    }
+
+    console.log(`https://solscan.io/tx/${signature}`);
   };
   return (
     <div>
