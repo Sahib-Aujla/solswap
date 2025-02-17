@@ -8,98 +8,116 @@ import React, { useState } from "react";
 const Swap = () => {
   const wallet = useWallet();
   const { connection } = useConnection();
-  const [val, setVal] = useState("0");
-  const [val2, setVal2] = useState("0");
+  const [val, setVal] = useState("");
+  const [val2, setVal2] = useState("");
   const [quote, setQuote] = useState<QuoteResponse>();
+  const [loading, setLoading] = useState(false);
 
   const createTxn = async () => {
     if (!wallet || !wallet.publicKey || !quote) {
       return;
     }
+    try {
+      setLoading(true);
 
-    const swapResponse = await getSwapResponse(
-      wallet.publicKey.toBase58(),
-      quote
-    );
-    //console.log(swapResp);
-    const swapTransactionBuf = Buffer.from(
-      swapResponse.swapTransaction,
-      "base64"
-    );
-    const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
+      const swapResponse = await getSwapResponse(
+        wallet.publicKey.toBase58(),
+        quote
+      );
+      //console.log(swapResp);
+      const swapTransactionBuf = Buffer.from(
+        swapResponse.swapTransaction,
+        "base64"
+      );
+      const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
 
-    // Sign the transaction
-    const signature = await wallet.sendTransaction(transaction, connection);
+      // Sign the transaction
+      const signature = await wallet.sendTransaction(transaction, connection);
 
-    // We first simulate whether the transaction would be successful
-    const { value: simulatedTransactionResponse } =
-      await connection.simulateTransaction(transaction, {
-        replaceRecentBlockhash: true,
-        commitment: "processed",
-      });
-    const { err, logs } = simulatedTransactionResponse;
+      // We first simulate whether the transaction would be successful
+      const { value: simulatedTransactionResponse } =
+        await connection.simulateTransaction(transaction, {
+          replaceRecentBlockhash: true,
+          commitment: "processed",
+        });
+      const { err, logs } = simulatedTransactionResponse;
 
-    if (err) {
-      console.error("Simulation Error:");
-      console.error({ err, logs });
-      return;
-    }
-
-    const serializedTransaction = Buffer.from(transaction.serialize());
-
-    const transactionResponse = await connection.sendRawTransaction(
-      serializedTransaction,
-      {
-        skipPreflight: true,
+      if (err) {
+        console.error("Simulation Error:");
+        console.error({ err, logs });
+        return;
       }
-    );
 
-    if (!transactionResponse) {
-      console.error("Transaction not confirmed");
-      return;
+      const serializedTransaction = Buffer.from(transaction.serialize());
+
+      const transactionResponse = await connection.sendRawTransaction(
+        serializedTransaction,
+        {
+          skipPreflight: true,
+        }
+      );
+
+      if (!transactionResponse) {
+        console.error("Transaction not confirmed");
+        return;
+      }
+
+      console.log(`https://solscan.io/tx/${signature}`);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setLoading(false);
     }
-
-    console.log(`https://solscan.io/tx/${signature}`);
   };
+
   return (
-    <div>
-      <div className="border border-slate-300 rounded-lg p-4">
-        <h2 className="text-xl font-bold mb-4">Swap Sol for USDC</h2>
-        <div className="flex flex-col gap-2">
+    <div className="flex items-center justify-center w-full h-full">
+      <div className="w-full max-w-md space-y-4 p-4">
+        <div className="bg-[#1b1b1b] p-4 rounded-lg shadow-lg">
+          <div className="text-[#939393] text-sm mb-2">You Pay</div>
           <input
             value={val}
             onChange={async (e) => {
               setVal(e.target.value);
-
               const lmp = parseFloat(e.target.value) * LAMPORTS_PER_SOL;
-              console.log({ lmp });
               if (lmp === 0 || isNaN(lmp)) return;
               const resp = await getQuote(lmp);
               const r = parseInt(resp.outAmount) / 1000000;
-              console.log({ r });
               setVal2(r.toString());
               setQuote(resp);
             }}
+            className="bg-inherit w-full text-center text-white text-5xl p-4 
+                     outline-none focus:outline-none placeholder-gray-500
+                     transition-colors duration-200"
             type="text"
-            placeholder="Sol Value"
-            className="bg-inherit border border-slate-500 p-2"
+            placeholder="0"
           />
+          <div className="text-[#939393] text-sm mt-2">SOL</div>
+        </div>
+
+        <div className="bg-[#1b1b1b] p-4 rounded-lg shadow-lg">
+          <div className="text-[#939393] text-sm mb-2">You Receive</div>
           <input
             value={val2}
-            onChange={(e) => {
-              console.log(e.target.value);
-            }}
+            readOnly
+            className="bg-inherit w-full text-center text-white text-5xl p-4 
+                     outline-none focus:outline-none placeholder-gray-500
+                     transition-colors duration-200"
             type="text"
-            placeholder="USDC value"
-            className="bg-inherit border border-slate-500 p-2"
+            placeholder="0"
           />
-          <button
-            onClick={createTxn}
-            className="bg-white text-black p-3 mt-2 hover:bg-slate-100"
-          >
-            Swap
-          </button>
+          <div className="text-[#939393] text-sm mt-2">USDC</div>
         </div>
+
+        <button
+          onClick={createTxn}
+          disabled={!val || !quote || !wallet.publicKey || loading}
+          className="w-full bg-[#f971fc] hover:bg-[#ee6cf0] text-white font-semibold 
+                   py-4 px-6 rounded-lg transition-colors duration-200
+                   disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? "Swapping..." : "Swap SOL for USDC"}
+        </button>
       </div>
     </div>
   );
