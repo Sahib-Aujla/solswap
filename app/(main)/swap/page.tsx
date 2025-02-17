@@ -13,7 +13,10 @@ const Swap = () => {
   const [quote, setQuote] = useState<QuoteResponse>();
 
   const createTxn = async () => {
-    if (!wallet || !wallet.publicKey || !quote) return;
+    if (!wallet || !wallet.publicKey || !quote) {
+      return;
+    }
+
     const swapResponse = await getSwapResponse(
       wallet.publicKey.toBase58(),
       quote
@@ -72,8 +75,10 @@ const Swap = () => {
               console.log({ lmp });
               if (lmp === 0 || isNaN(lmp)) return;
               const resp = await getQuote(lmp);
-              setVal2(resp.outAmount);
-              setQuote(quote);
+              const r = parseInt(resp.outAmount) / 1000000;
+              console.log({ r });
+              setVal2(r.toString());
+              setQuote(resp);
             }}
             type="text"
             placeholder="Sol Value"
