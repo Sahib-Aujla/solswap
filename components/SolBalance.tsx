@@ -15,7 +15,11 @@ const SolBalance = () => {
     };
     getBalance();
   }, [connection, wallet.publicKey]);
-  return <div className="text-xl text-white">{balance} SOL</div>;
+  return (
+    <div className="flex items-center justify-center text-xl font-semibold text-[#f971fc]">
+      {balance} SOL
+    </div>
+  );
 };
 
 export default SolBalance;
